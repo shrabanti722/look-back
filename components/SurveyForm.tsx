@@ -1,0 +1,647 @@
+'use client'
+
+import { useState } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { SurveyData } from '@/app/page'
+
+interface SurveyFormProps {
+  onSubmit: (data: SurveyData) => void
+}
+
+const SECTIONS = [
+  'Basic Info',
+  'Looking Back',
+  'Friction & Struggles',
+  'Growth & Development',
+  'Working with Peers',
+  'Leadership Support',
+  'Looking Ahead',
+  'Final',
+]
+
+const FEEDBACK_COMFORT_OPTIONS = [
+  'Very comfortable',
+  'Somewhat comfortable',
+  'Neutral / unsure',
+  'Somewhat uncomfortable',
+  'Very uncomfortable',
+]
+
+const FEEDBACK_STOPS_OPTIONS = [
+  'Unclear expectations',
+  'Fear of conflict',
+  'Concern about relationships',
+  'Lack of skill or language',
+  'Power dynamics',
+  'Time or context',
+  'Nothing—this isn\'t an issue for me',
+  'Other',
+]
+
+const FEEDBACK_RECEIVED_OPTIONS = [
+  'In the moment',
+  'In 1:1s',
+  'Through managers',
+  'Retrospectives',
+  'Rarely or never',
+]
+
+export default function SurveyForm({ onSubmit }: SurveyFormProps) {
+  const [currentSection, setCurrentSection] = useState(0)
+  const [formData, setFormData] = useState<SurveyData>({
+    name: '',
+    email: '',
+    role: '',
+    product: '',
+    proudOf: [''],
+    meaningfulImpact: '',
+    struggles: '',
+    workHarder: '',
+    learned: '',
+    growthUnsupported: '',
+    feedbackComfort: '',
+    feedbackComfortReason: '',
+    feedbackStops: [],
+    feedbackStopsOther: '',
+    feedbackReceived: '',
+    feedbackReceivedReason: '',
+    feedbackEasier: '',
+    leadershipDifferent: '',
+    leadershipValue: '',
+    greatYear: '',
+    anythingElse: '',
+  })
+
+  const [isSubmitting, setIsSubmitting] = useState(false)
+
+  const updateField = (field: keyof SurveyData, value: any) => {
+    setFormData((prev) => ({ ...prev, [field]: value }))
+  }
+
+  const addProudOf = () => {
+    setFormData((prev) => ({
+      ...prev,
+      proudOf: [...prev.proudOf, ''],
+    }))
+  }
+
+  const updateProudOf = (index: number, value: string) => {
+    setFormData((prev) => {
+      const newProudOf = [...prev.proudOf]
+      newProudOf[index] = value
+      return { ...prev, proudOf: newProudOf }
+    })
+  }
+
+  const removeProudOf = (index: number) => {
+    setFormData((prev) => ({
+      ...prev,
+      proudOf: prev.proudOf.filter((_, i) => i !== index),
+    }))
+  }
+
+  const toggleFeedbackStop = (option: string) => {
+    setFormData((prev) => {
+      const stops = prev.feedbackStops || []
+      if (stops.includes(option)) {
+        return { ...prev, feedbackStops: stops.filter((s) => s !== option) }
+      } else {
+        return { ...prev, feedbackStops: [...stops, option] }
+      }
+    })
+  }
+
+  const handleNext = () => {
+    if (currentSection < SECTIONS.length - 1) {
+      setCurrentSection(currentSection + 1)
+      // Scroll to form content instead of top
+      setTimeout(() => {
+        const formContent = document.getElementById('form-content')
+        if (formContent) {
+          formContent.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        }
+      }, 100)
+    }
+  }
+
+  const handlePrevious = () => {
+    if (currentSection > 0) {
+      setCurrentSection(currentSection - 1)
+      // Scroll to form content instead of top
+      setTimeout(() => {
+        const formContent = document.getElementById('form-content')
+        if (formContent) {
+          formContent.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        }
+      }, 100)
+    }
+  }
+
+  const handleSubmit = async () => {
+    setIsSubmitting(true)
+    // Clean up empty proudOf entries
+    const cleanedData = {
+      ...formData,
+      proudOf: formData.proudOf.filter((item) => item.trim() !== ''),
+    }
+    onSubmit(cleanedData)
+  }
+
+  const renderSection = () => {
+    switch (currentSection) {
+      case 0: // Basic Info
+        return (
+          <div className="space-y-6">
+            <div>
+              <label className="block text-sm font-semibold text-gray-800 mb-2">
+                Name <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                value={formData.name}
+                onChange={(e) => updateField('name', e.target.value)}
+                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white transition-all"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-gray-800 mb-2">
+                Email <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="email"
+                value={formData.email}
+                onChange={(e) => updateField('email', e.target.value)}
+                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white transition-all"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-gray-800 mb-2">
+                Role
+              </label>
+              <input
+                type="text"
+                value={formData.role}
+                onChange={(e) => updateField('role', e.target.value)}
+                placeholder="e.g., Engineer"
+                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white transition-all"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-gray-800 mb-2">
+                Product
+              </label>
+              <input
+                type="text"
+                value={formData.product}
+                onChange={(e) => updateField('product', e.target.value)}
+                placeholder="e.g., Miracle of Mind"
+                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white transition-all"
+              />
+            </div>
+          </div>
+        )
+
+      case 1: // Looking Back
+        return (
+          <div className="space-y-6">
+            <div>
+              <label className="block text-sm font-semibold text-gray-800 mb-2">
+                What are you most proud of from this year? (1–3 things)
+              </label>
+              <p className="text-xs text-gray-500 mb-3">
+                Think in terms of outcomes, impact, quality, or ownership—not just tasks.
+              </p>
+              {formData.proudOf.map((item, index) => (
+                <div key={index} className="mb-3 flex gap-2">
+                  <input
+                    type="text"
+                    value={item}
+                    onChange={(e) => updateProudOf(index, e.target.value)}
+                    placeholder={`Achievement ${index + 1}`}
+                    className="flex-1 px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white transition-all"
+                  />
+                  {formData.proudOf.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => removeProudOf(index)}
+                      className="px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg"
+                    >
+                      Remove
+                    </button>
+                  )}
+                </div>
+              ))}
+              {formData.proudOf.length < 3 && (
+                <button
+                  type="button"
+                  onClick={addProudOf}
+                  className="text-blue-600 hover:text-blue-700 text-sm font-medium"
+                >
+                  + Add another
+                </button>
+              )}
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-gray-800 mb-2">
+                What work of yours had a meaningful impact but may not be very visible?
+              </label>
+              <p className="text-xs text-gray-500 mb-3">
+                This could include behind-the-scenes work, unblocking others, raising the bar, or holding things together.
+              </p>
+              <textarea
+                value={formData.meaningfulImpact}
+                onChange={(e) => updateField('meaningfulImpact', e.target.value)}
+                rows={5}
+                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white resize-y transition-all"
+                placeholder="Share your thoughts..."
+              />
+            </div>
+          </div>
+        )
+
+      case 2: // Friction & Struggles
+        return (
+          <div className="space-y-6">
+            <div>
+              <label className="block text-sm font-semibold text-gray-800 mb-2">
+                What did you struggle with?
+              </label>
+              <textarea
+                value={formData.struggles}
+                onChange={(e) => updateField('struggles', e.target.value)}
+                rows={5}
+                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white resize-y transition-all"
+                placeholder="Share your thoughts..."
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-gray-800 mb-2">
+                What made your work harder than it needed to be this year?
+              </label>
+              <p className="text-xs text-gray-500 mb-3">
+                Process, unclear priorities, dependencies, tooling, decision delays, structure, communication—anything that consistently slowed you down.
+              </p>
+              <textarea
+                value={formData.workHarder}
+                onChange={(e) => updateField('workHarder', e.target.value)}
+                rows={5}
+                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white resize-y transition-all"
+                placeholder="Share your thoughts..."
+              />
+            </div>
+          </div>
+        )
+
+      case 3: // Growth & Development
+        return (
+          <div className="space-y-6">
+            <div>
+              <label className="block text-sm font-semibold text-gray-800 mb-2">
+                What did you personally learn or get better at this year?
+              </label>
+              <textarea
+                value={formData.learned}
+                onChange={(e) => updateField('learned', e.target.value)}
+                rows={5}
+                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white resize-y transition-all"
+                placeholder="Share your thoughts..."
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-gray-800 mb-2">
+                Where do you want to grow next year, but feel under-supported today?
+              </label>
+              <textarea
+                value={formData.growthUnsupported}
+                onChange={(e) => updateField('growthUnsupported', e.target.value)}
+                rows={5}
+                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white resize-y transition-all"
+                placeholder="Share your thoughts..."
+              />
+            </div>
+          </div>
+        )
+
+      case 4: // Working with Peers
+        return (
+          <div className="space-y-6">
+            <div>
+              <label className="block text-sm font-semibold text-gray-800 mb-2">
+                How comfortable do you feel giving direct, constructive feedback to peers when something isn't working?
+              </label>
+              <div className="space-y-2 mt-3">
+                {FEEDBACK_COMFORT_OPTIONS.map((option) => (
+                  <label key={option} className="flex items-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-blue-300 cursor-pointer transition-colors">
+                    <input
+                      type="radio"
+                      name="feedbackComfort"
+                      value={option}
+                      checked={formData.feedbackComfort === option}
+                      onChange={(e) => updateField('feedbackComfort', e.target.value)}
+                      className="mr-3 w-4 h-4 text-blue-600 focus:ring-blue-500"
+                    />
+                    <span className="text-gray-900 font-medium">{option}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-gray-800 mb-2">
+                What makes it easier or harder? (Optional)
+              </label>
+              <textarea
+                value={formData.feedbackComfortReason}
+                onChange={(e) => updateField('feedbackComfortReason', e.target.value)}
+                rows={4}
+                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white resize-y transition-all"
+                placeholder="Share your thoughts..."
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-gray-800 mb-2">
+                What typically stops you from giving feedback to a peer when you feel it's needed?
+              </label>
+              <div className="space-y-2 mt-3">
+                {FEEDBACK_STOPS_OPTIONS.map((option) => (
+                  <label key={option} className="flex items-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-blue-300 cursor-pointer transition-colors">
+                    <input
+                      type="checkbox"
+                      checked={formData.feedbackStops?.includes(option) || false}
+                      onChange={() => toggleFeedbackStop(option)}
+                      className="mr-3 w-4 h-4 text-blue-600 focus:ring-blue-500 rounded"
+                    />
+                    <span className="text-gray-900 font-medium">{option}</span>
+                  </label>
+                ))}
+              </div>
+              {formData.feedbackStops?.includes('Other') && (
+                <div className="mt-3">
+                  <input
+                    type="text"
+                    value={formData.feedbackStopsOther}
+                    onChange={(e) => updateField('feedbackStopsOther', e.target.value)}
+                    placeholder="Please specify..."
+                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white transition-all"
+                  />
+                </div>
+              )}
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-gray-800 mb-2">
+                When peers give you feedback, how does it usually happen today?
+              </label>
+              <div className="space-y-2 mt-3">
+                {FEEDBACK_RECEIVED_OPTIONS.map((option) => (
+                  <label key={option} className="flex items-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-blue-300 cursor-pointer transition-colors">
+                    <input
+                      type="radio"
+                      name="feedbackReceived"
+                      value={option}
+                      checked={formData.feedbackReceived === option}
+                      onChange={(e) => updateField('feedbackReceived', e.target.value)}
+                      className="mr-3 w-4 h-4 text-blue-600 focus:ring-blue-500"
+                    />
+                    <span className="text-gray-900 font-medium">{option}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-gray-800 mb-2">
+                What would make it easier or safer for you to give and receive peer feedback next year?
+              </label>
+              <textarea
+                value={formData.feedbackEasier}
+                onChange={(e) => updateField('feedbackEasier', e.target.value)}
+                rows={5}
+                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white resize-y transition-all"
+                placeholder="Share your thoughts..."
+              />
+            </div>
+          </div>
+        )
+
+      case 5: // Leadership Support
+        return (
+          <div className="space-y-6">
+            <div>
+              <label className="block text-sm font-semibold text-gray-800 mb-2">
+                What are the few things I could do differently to help you do your best work?
+              </label>
+              <textarea
+                value={formData.leadershipDifferent}
+                onChange={(e) => updateField('leadershipDifferent', e.target.value)}
+                rows={5}
+                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white resize-y transition-all"
+                placeholder="Share your thoughts..."
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-gray-800 mb-2">
+                What is the one thing I am doing that adds most value to you and your work, and I should continue doing?
+              </label>
+              <textarea
+                value={formData.leadershipValue}
+                onChange={(e) => updateField('leadershipValue', e.target.value)}
+                rows={5}
+                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white resize-y transition-all"
+                placeholder="Share your thoughts..."
+              />
+            </div>
+          </div>
+        )
+
+      case 6: // Looking Ahead
+        return (
+          <div className="space-y-6">
+            <div>
+              <label className="block text-sm font-semibold text-gray-800 mb-2">
+                If next year were a great year for you, what would be meaningfully different?
+              </label>
+              <textarea
+                value={formData.greatYear}
+                onChange={(e) => updateField('greatYear', e.target.value)}
+                rows={5}
+                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white resize-y transition-all"
+                placeholder="Share your thoughts..."
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-gray-800 mb-2">
+                Anything else?
+              </label>
+              <textarea
+                value={formData.anythingElse}
+                onChange={(e) => updateField('anythingElse', e.target.value)}
+                rows={5}
+                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white resize-y transition-all"
+                placeholder="Share any additional thoughts..."
+              />
+            </div>
+          </div>
+        )
+
+      case 7: // Final/Review
+        return (
+          <div className="space-y-6">
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+              <h3 className="text-lg font-semibold text-blue-900 mb-2">
+                Ready to submit?
+              </h3>
+              <p className="text-blue-700">
+                Your responses will be saved to a Google Doc. Make sure you've filled in all the sections you want to complete.
+              </p>
+            </div>
+            <div className="text-center">
+              <p className="text-gray-600 mb-4">
+                You can go back to any section to make changes before submitting.
+              </p>
+            </div>
+          </div>
+        )
+
+      default:
+        return null
+    }
+  }
+
+  return (
+    <div className="min-h-screen py-8 px-4 pb-24">
+      <div className="max-w-3xl mx-auto">
+        {/* Progress Bar */}
+        <div className="mb-8 bg-white/80 backdrop-blur-sm rounded-xl p-4 shadow-sm border border-gray-100">
+          <div className="flex justify-between items-center mb-3">
+            <span className="text-sm font-semibold text-gray-700">
+              Section {currentSection + 1} of {SECTIONS.length}
+            </span>
+            <span className="text-sm font-medium text-gray-600 bg-gray-100 px-3 py-1 rounded-full">
+              {Math.round(((currentSection + 1) / SECTIONS.length) * 100)}%
+            </span>
+          </div>
+          <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+            <motion.div
+              className="bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 h-3 rounded-full shadow-sm"
+              initial={{ width: 0 }}
+              animate={{ width: `${((currentSection + 1) / SECTIONS.length) * 100}%` }}
+              transition={{ duration: 0.4, ease: "easeOut" }}
+            />
+          </div>
+        </div>
+
+        {/* Section Title */}
+        <motion.div
+          key={currentSection}
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: 10 }}
+          transition={{ duration: 0.3 }}
+          className="mb-6"
+        >
+          <div className="flex items-center gap-2 mb-3">
+            <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-600 to-purple-600 flex items-center justify-center text-white font-bold text-sm">
+              {currentSection + 1}
+            </div>
+            <h2 className="text-3xl font-bold text-gray-800">
+              {SECTIONS[currentSection]}
+            </h2>
+          </div>
+          <p className="text-gray-600 text-lg ml-12">
+            {currentSection === 0 && 'Let\'s start with some basic information'}
+            {currentSection === 1 && 'Reflect on your achievements and impact'}
+            {currentSection === 2 && 'Share what challenged you'}
+            {currentSection === 3 && 'Think about your growth journey'}
+            {currentSection === 4 && 'Reflect on peer relationships'}
+            {currentSection === 5 && 'Share feedback for leadership'}
+            {currentSection === 6 && 'Envision your future'}
+            {currentSection === 7 && 'Review and submit'}
+          </p>
+        </motion.div>
+
+        {/* Form Content */}
+        <motion.div
+          id="form-content"
+          key={currentSection}
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -20 }}
+          transition={{ duration: 0.3 }}
+          className="bg-white rounded-2xl shadow-xl border border-gray-100 p-8 mb-8"
+        >
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={currentSection}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+            >
+              {renderSection()}
+            </motion.div>
+          </AnimatePresence>
+        </motion.div>
+
+        {/* Navigation Buttons */}
+        <div className="flex justify-between items-center gap-4 fixed bottom-0 left-0 right-0 bg-white/98 backdrop-blur-md p-4 shadow-2xl border-t border-gray-200 z-10">
+          <div className="max-w-3xl mx-auto w-full flex justify-between items-center gap-4">
+            <button
+              type="button"
+              onClick={handlePrevious}
+              disabled={currentSection === 0}
+              className="px-6 py-3 border-2 border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 hover:border-gray-400 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent transition-all duration-200 flex items-center gap-2"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+              Previous
+            </button>
+
+            <div className="flex items-center gap-2 text-sm text-gray-600 bg-gray-100 px-4 py-2 rounded-full">
+              <span className="font-semibold">{currentSection + 1}</span>
+              <span className="text-gray-400">/</span>
+              <span>{SECTIONS.length}</span>
+            </div>
+
+            {currentSection < SECTIONS.length - 1 ? (
+              <button
+                type="button"
+                onClick={handleNext}
+                className="px-8 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg font-semibold hover:shadow-xl hover:from-blue-700 hover:to-purple-700 transform hover:scale-105 active:scale-100 transition-all duration-200 flex items-center gap-2"
+              >
+                Next
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={handleSubmit}
+                disabled={isSubmitting || !formData.name || !formData.email}
+                className="px-8 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg font-semibold hover:shadow-xl hover:from-green-700 hover:to-emerald-700 transform hover:scale-105 active:scale-100 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center gap-2"
+              >
+                {isSubmitting ? (
+                  <>
+                    <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                    </svg>
+                    Submitting...
+                  </>
+                ) : (
+                  <>
+                    Submit Survey
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                  </>
+                )}
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
