@@ -40,7 +40,7 @@ export default function WelcomeScreen({ onStart }: WelcomeScreenProps) {
         >
           <p className="text-gray-700 text-lg leading-relaxed mb-6">
             This is a safe space. Your inputs will not be shared with your peers.
-            Take your time—there's no rush. Feel free to skip questions that don't
+            Take your time—there&apos;s no rush. Feel free to skip questions that don&apos;t
             resonate with you.
           </p>
           <p className="text-sm text-gray-500">

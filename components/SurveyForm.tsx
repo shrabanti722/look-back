@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { SurveyData } from '@/app/page'
 
@@ -73,9 +73,111 @@ export default function SurveyForm({ onSubmit }: SurveyFormProps) {
   })
 
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [lastSaved, setLastSaved] = useState<Date | null>(null)
+  const isInitialLoadRef = useRef(true)
+  const hasLoadedRef = useRef(false)
+
+  const STORAGE_KEY = 'survey-form-draft'
+
+  // Load saved data from localStorage on mount
+  useEffect(() => {
+    if (typeof window !== 'undefined' && !hasLoadedRef.current) {
+      hasLoadedRef.current = true
+      try {
+        const saved = localStorage.getItem(STORAGE_KEY)
+        if (saved) {
+          const parsed = JSON.parse(saved)
+          if (parsed.formData) {
+            setFormData(parsed.formData)
+          }
+          if (parsed.currentSection !== undefined) {
+            setCurrentSection(parsed.currentSection)
+          }
+          if (parsed.lastSaved) {
+            setLastSaved(new Date(parsed.lastSaved))
+          }
+        }
+        // Mark initial load as complete after state updates have time to propagate
+        setTimeout(() => {
+          isInitialLoadRef.current = false
+        }, 500)
+      } catch (error) {
+        console.error('Failed to load saved form data:', error)
+        isInitialLoadRef.current = false
+      }
+    }
+  }, [])
+
+  // Helper function to save data to localStorage
+  const saveToLocalStorage = useCallback(() => {
+    if (typeof window !== 'undefined' && !isInitialLoadRef.current) {
+      try {
+        const dataToSave = {
+          formData,
+          currentSection,
+          lastSaved: new Date().toISOString(),
+        }
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(dataToSave))
+        setLastSaved(new Date())
+      } catch (error) {
+        console.error('Failed to save form data:', error)
+      }
+    }
+  }, [formData, currentSection])
+
+  // Save immediately when section changes
+  useEffect(() => {
+    if (typeof window !== 'undefined' && !isInitialLoadRef.current) {
+      saveToLocalStorage()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentSection])
+
+  // Debounced save for formData changes (fallback - saves after 2 seconds of inactivity)
+  useEffect(() => {
+    if (typeof window !== 'undefined' && !isInitialLoadRef.current) {
+      const timeoutId = setTimeout(() => {
+        saveToLocalStorage()
+      }, 2000)
+
+      return () => clearTimeout(timeoutId)
+    }
+  }, [formData, saveToLocalStorage])
+
+  // Save on page unload to ensure data is saved even if user closes browser
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const handleBeforeUnload = () => {
+        if (!isInitialLoadRef.current) {
+          saveToLocalStorage()
+        }
+      }
+      window.addEventListener('beforeunload', handleBeforeUnload)
+      return () => {
+        window.removeEventListener('beforeunload', handleBeforeUnload)
+      }
+    }
+  }, [saveToLocalStorage])
+
+  // Clear saved data after successful submission
+  const clearSavedData = useCallback(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.removeItem(STORAGE_KEY)
+        setLastSaved(null)
+      } catch (error) {
+        console.error('Failed to clear saved form data:', error)
+      }
+    }
+  }, [])
 
   const updateField = (field: keyof SurveyData, value: any) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
+  }
+
+  // Save when user leaves an input field
+  const handleFieldBlur = () => {
+    saveToLocalStorage()
   }
 
   const addProudOf = () => {
@@ -144,7 +246,16 @@ export default function SurveyForm({ onSubmit }: SurveyFormProps) {
       ...formData,
       proudOf: formData.proudOf.filter((item) => item.trim() !== ''),
     }
-    onSubmit(cleanedData)
+    try {
+      // Call onSubmit and wait for it to complete
+      await Promise.resolve(onSubmit(cleanedData))
+      // Only clear saved data after successful submission
+      clearSavedData()
+    } catch (error) {
+      // If submission fails, don't clear localStorage so user can retry
+      console.error('Submission failed, keeping saved data:', error)
+      setIsSubmitting(false)
+    }
   }
 
   const renderSection = () => {
@@ -160,6 +271,7 @@ export default function SurveyForm({ onSubmit }: SurveyFormProps) {
                 type="text"
                 value={formData.name}
                 onChange={(e) => updateField('name', e.target.value)}
+                onBlur={handleFieldBlur}
                 className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white transition-all"
                 required
               />
@@ -172,6 +284,7 @@ export default function SurveyForm({ onSubmit }: SurveyFormProps) {
                 type="email"
                 value={formData.email}
                 onChange={(e) => updateField('email', e.target.value)}
+                onBlur={handleFieldBlur}
                 className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white transition-all"
                 required
               />
@@ -184,6 +297,7 @@ export default function SurveyForm({ onSubmit }: SurveyFormProps) {
                 type="text"
                 value={formData.role}
                 onChange={(e) => updateField('role', e.target.value)}
+                onBlur={handleFieldBlur}
                 placeholder="e.g., Engineer"
                 className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white transition-all"
               />
@@ -196,6 +310,7 @@ export default function SurveyForm({ onSubmit }: SurveyFormProps) {
                 type="text"
                 value={formData.product}
                 onChange={(e) => updateField('product', e.target.value)}
+                onBlur={handleFieldBlur}
                 placeholder="e.g., Miracle of Mind"
                 className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white transition-all"
               />
@@ -219,6 +334,7 @@ export default function SurveyForm({ onSubmit }: SurveyFormProps) {
                     type="text"
                     value={item}
                     onChange={(e) => updateProudOf(index, e.target.value)}
+                    onBlur={handleFieldBlur}
                     placeholder={`Achievement ${index + 1}`}
                     className="flex-1 px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white transition-all"
                   />
@@ -253,6 +369,7 @@ export default function SurveyForm({ onSubmit }: SurveyFormProps) {
               <textarea
                 value={formData.meaningfulImpact}
                 onChange={(e) => updateField('meaningfulImpact', e.target.value)}
+                onBlur={handleFieldBlur}
                 rows={5}
                 className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white resize-y transition-all"
                 placeholder="Share your thoughts..."
@@ -271,6 +388,7 @@ export default function SurveyForm({ onSubmit }: SurveyFormProps) {
               <textarea
                 value={formData.struggles}
                 onChange={(e) => updateField('struggles', e.target.value)}
+                onBlur={handleFieldBlur}
                 rows={5}
                 className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white resize-y transition-all"
                 placeholder="Share your thoughts..."
@@ -286,6 +404,7 @@ export default function SurveyForm({ onSubmit }: SurveyFormProps) {
               <textarea
                 value={formData.workHarder}
                 onChange={(e) => updateField('workHarder', e.target.value)}
+                onBlur={handleFieldBlur}
                 rows={5}
                 className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white resize-y transition-all"
                 placeholder="Share your thoughts..."
@@ -304,6 +423,7 @@ export default function SurveyForm({ onSubmit }: SurveyFormProps) {
               <textarea
                 value={formData.learned}
                 onChange={(e) => updateField('learned', e.target.value)}
+                onBlur={handleFieldBlur}
                 rows={5}
                 className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white resize-y transition-all"
                 placeholder="Share your thoughts..."
@@ -316,6 +436,7 @@ export default function SurveyForm({ onSubmit }: SurveyFormProps) {
               <textarea
                 value={formData.growthUnsupported}
                 onChange={(e) => updateField('growthUnsupported', e.target.value)}
+                onBlur={handleFieldBlur}
                 rows={5}
                 className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white resize-y transition-all"
                 placeholder="Share your thoughts..."
@@ -329,7 +450,7 @@ export default function SurveyForm({ onSubmit }: SurveyFormProps) {
           <div className="space-y-6">
             <div>
               <label className="block text-sm font-semibold text-gray-800 mb-2">
-                How comfortable do you feel giving direct, constructive feedback to peers when something isn't working?
+                How comfortable do you feel giving direct, constructive feedback to peers when something isn&apos;t working?
               </label>
               <div className="space-y-2 mt-3">
                 {FEEDBACK_COMFORT_OPTIONS.map((option) => (
@@ -354,6 +475,7 @@ export default function SurveyForm({ onSubmit }: SurveyFormProps) {
               <textarea
                 value={formData.feedbackComfortReason}
                 onChange={(e) => updateField('feedbackComfortReason', e.target.value)}
+                onBlur={handleFieldBlur}
                 rows={4}
                 className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white resize-y transition-all"
                 placeholder="Share your thoughts..."
@@ -361,7 +483,7 @@ export default function SurveyForm({ onSubmit }: SurveyFormProps) {
             </div>
             <div>
               <label className="block text-sm font-semibold text-gray-800 mb-2">
-                What typically stops you from giving feedback to a peer when you feel it's needed?
+                What typically stops you from giving feedback to a peer when you feel it&apos;s needed?
               </label>
               <div className="space-y-2 mt-3">
                 {FEEDBACK_STOPS_OPTIONS.map((option) => (
@@ -382,6 +504,7 @@ export default function SurveyForm({ onSubmit }: SurveyFormProps) {
                     type="text"
                     value={formData.feedbackStopsOther}
                     onChange={(e) => updateField('feedbackStopsOther', e.target.value)}
+                    onBlur={handleFieldBlur}
                     placeholder="Please specify..."
                     className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white transition-all"
                   />
@@ -415,6 +538,7 @@ export default function SurveyForm({ onSubmit }: SurveyFormProps) {
               <textarea
                 value={formData.feedbackEasier}
                 onChange={(e) => updateField('feedbackEasier', e.target.value)}
+                onBlur={handleFieldBlur}
                 rows={5}
                 className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white resize-y transition-all"
                 placeholder="Share your thoughts..."
@@ -433,6 +557,7 @@ export default function SurveyForm({ onSubmit }: SurveyFormProps) {
               <textarea
                 value={formData.leadershipDifferent}
                 onChange={(e) => updateField('leadershipDifferent', e.target.value)}
+                onBlur={handleFieldBlur}
                 rows={5}
                 className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white resize-y transition-all"
                 placeholder="Share your thoughts..."
@@ -445,6 +570,7 @@ export default function SurveyForm({ onSubmit }: SurveyFormProps) {
               <textarea
                 value={formData.leadershipValue}
                 onChange={(e) => updateField('leadershipValue', e.target.value)}
+                onBlur={handleFieldBlur}
                 rows={5}
                 className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white resize-y transition-all"
                 placeholder="Share your thoughts..."
@@ -463,6 +589,7 @@ export default function SurveyForm({ onSubmit }: SurveyFormProps) {
               <textarea
                 value={formData.greatYear}
                 onChange={(e) => updateField('greatYear', e.target.value)}
+                onBlur={handleFieldBlur}
                 rows={5}
                 className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white resize-y transition-all"
                 placeholder="Share your thoughts..."
@@ -475,6 +602,7 @@ export default function SurveyForm({ onSubmit }: SurveyFormProps) {
               <textarea
                 value={formData.anythingElse}
                 onChange={(e) => updateField('anythingElse', e.target.value)}
+                onBlur={handleFieldBlur}
                 rows={5}
                 className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white resize-y transition-all"
                 placeholder="Share any additional thoughts..."
@@ -491,7 +619,7 @@ export default function SurveyForm({ onSubmit }: SurveyFormProps) {
                 Ready to submit?
               </h3>
               <p className="text-blue-700">
-                Your responses will be saved to a Google Doc. Make sure you've filled in all the sections you want to complete.
+                Your responses will be saved to a Google Doc. Make sure you&apos;ve filled in all the sections you want to complete.
               </p>
             </div>
             <div className="text-center">
@@ -513,9 +641,19 @@ export default function SurveyForm({ onSubmit }: SurveyFormProps) {
         {/* Progress Bar */}
         <div className="mb-8 bg-white/80 backdrop-blur-sm rounded-xl p-4 shadow-sm border border-gray-100">
           <div className="flex justify-between items-center mb-3">
-            <span className="text-sm font-semibold text-gray-700">
-              Section {currentSection + 1} of {SECTIONS.length}
-            </span>
+            <div className="flex items-center gap-3">
+              <span className="text-sm font-semibold text-gray-700">
+                Section {currentSection + 1} of {SECTIONS.length}
+              </span>
+              {lastSaved && (
+                <span className="text-xs text-gray-500 flex items-center gap-1">
+                  <svg className="w-3 h-3 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                  Saved {lastSaved.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </span>
+              )}
+            </div>
             <span className="text-sm font-medium text-gray-600 bg-gray-100 px-3 py-1 rounded-full">
               {Math.round(((currentSection + 1) / SECTIONS.length) * 100)}%
             </span>
