@@ -1,6 +1,69 @@
-# Email Setup (Optional - For Email Storage)
+# Email Setup Guide
 
-If you want to receive survey responses via email, here are simple options:
+This guide covers two email features:
+1. **Email Notifications** (Recommended) - Get notified when someone submits (just name & email)
+2. **Full Email Storage** (Optional) - Receive complete survey responses via email
+
+---
+
+## Email Notifications (Quick Setup) ⭐
+
+**What it does:** Sends you a simple email notification with just the submitter's name and email whenever someone completes the survey.
+
+**Setup (2 minutes):**
+
+1. **Sign up for Resend**: Go to [resend.com](https://resend.com) (free tier: 3,000 emails/month)
+2. **Get your API key**:
+   - After signing up, go to **API Keys** in the dashboard
+   - Click **"Create API Key"**
+   - Copy the key (starts with `re_`)
+3. **Add to `.env.local`**:
+   ```bash
+   RESEND_API_KEY=re_xxxxxxxxxxxxx
+   SURVEY_RECIPIENT_EMAIL=your-email@example.com
+   RESEND_FROM_EMAIL=Survey <onboarding@resend.dev>
+   ```
+   - `RESEND_API_KEY`: Your Resend API key
+   - `SURVEY_RECIPIENT_EMAIL`: Your email address (where notifications will be sent)
+   - `RESEND_FROM_EMAIL`: Optional - defaults to `onboarding@resend.dev` (for testing). For production, use your verified domain.
+
+4. **Restart your dev server**:
+   ```bash
+   npm run dev
+   ```
+
+**That's it!** Now whenever someone submits the survey:
+- The response is saved to CSV (Supabase/S3)
+- You'll receive an email notification with:
+  - Submitter's name
+  - Submitter's email
+  - Timestamp
+
+**Note:** The `resend` package is already installed in your project, so no need to run `npm install`.
+
+**For Production (Vercel):**
+1. Go to your Vercel project → **Settings** → **Environment Variables**
+2. Add the same three variables:
+   - `RESEND_API_KEY`
+   - `SURVEY_RECIPIENT_EMAIL`
+   - `RESEND_FROM_EMAIL` (optional)
+3. Redeploy your application
+
+**Email Format:**
+```
+New Survey Submission
+
+Name: John Doe
+Email: john@example.com
+
+Submitted on: 1/15/2025, 2:30:45 PM
+```
+
+---
+
+## Full Email Storage (Optional)
+
+If you want to receive complete survey responses via email instead of (or in addition to) CSV storage:
 
 ## Option 1: Resend (Easiest - Recommended) ⭐
 

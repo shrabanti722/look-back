@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { SurveyData } from '@/app/page'
+import { Resend } from 'resend'
 
 // Convert survey data to CSV row
 function surveyDataToCSVRow(data: SurveyData): string {
@@ -65,6 +66,42 @@ const CSV_HEADERS = [
   'Anything Else',
 ].join(',')
 
+// Send notification email with just name and email
+async function sendNotificationEmail(data: SurveyData) {
+  // Only send if email is configured
+  if (!process.env.RESEND_API_KEY || !process.env.SURVEY_RECIPIENT_EMAIL) {
+    return null // Email not configured, silently skip
+  }
+
+  try {
+    const resend = new Resend(process.env.RESEND_API_KEY)
+    const recipientEmail = process.env.SURVEY_RECIPIENT_EMAIL
+    const fromEmail = process.env.RESEND_FROM_EMAIL || 'Survey <onboarding@resend.dev>'
+
+    const emailContent = `New Survey Submission
+
+Name: ${data.name}
+Email: ${data.email}
+
+Submitted on: ${new Date().toLocaleString()}
+`
+
+    const result = await resend.emails.send({
+      from: fromEmail,
+      to: recipientEmail,
+      subject: `New Survey Submission - ${data.name}`,
+      text: emailContent,
+      replyTo: data.email, // Allow replying directly to the respondent
+    })
+
+    return result
+  } catch (error: any) {
+    // Log error but don't throw - we don't want email failures to break the submission
+    console.error('Failed to send notification email:', error.message)
+    return null
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     const data: SurveyData = await request.json()
@@ -117,6 +154,11 @@ export async function POST(request: NextRequest) {
         throw new Error(`Failed to upload CSV: ${uploadError.message}`)
       }
 
+      // Send notification email (non-blocking - won't fail if email fails)
+      sendNotificationEmail(data).catch((err) => {
+        console.error('Email notification error (non-critical):', err)
+      })
+
       // Get public URL
       const { data: urlData } = supabase.storage
         .from('survey-data')
@@ -164,6 +206,11 @@ export async function POST(request: NextRequest) {
         Body: csvContent,
         ContentType: 'text/csv',
       }).promise()
+
+      // Send notification email (non-blocking - won't fail if email fails)
+      sendNotificationEmail(data).catch((err) => {
+        console.error('Email notification error (non-critical):', err)
+      })
 
       return NextResponse.json({
         success: true,
