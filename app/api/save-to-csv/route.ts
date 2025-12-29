@@ -34,8 +34,11 @@ function surveyDataToCSVRow(data: SurveyData): string {
     escapeCSV(data.feedbackReceived),
     escapeCSV(data.feedbackReceivedReason),
     escapeCSV(data.feedbackEasier),
-    escapeCSV(data.leadershipDifferent),
     escapeCSV(data.leadershipValue),
+    escapeCSV(data.leadershipDifferent),
+    escapeCSV(data.toolsEnhancing),
+    escapeCSV(data.sadhanaRegularity),
+    escapeCSV(data.innerGrowthSupport),
     escapeCSV(data.greatYear),
     escapeCSV(data.anythingElse),
   ]
@@ -63,8 +66,11 @@ const CSV_HEADERS = [
   'Feedback Received',
   'Feedback Received Reason',
   'Feedback Easier',
-  'Leadership Different',
   'Leadership Value',
+  'Leadership Different',
+  'Tools Enhancing',
+  'Sadhana Regularity',
+  'Inner Growth Support',
   'Great Year',
   'Anything Else',
 ].join(',')
@@ -88,17 +94,28 @@ export async function POST(request: NextRequest) {
 
     const csvFilePath = path.join(responsesDir, 'survey-responses.csv')
 
-    // Check if CSV file exists, if not create with headers
+    // Check if CSV file exists and read existing content
+    let csvContent = CSV_HEADERS + '\n'
     const fileExists = fs.existsSync(csvFilePath)
     
-    if (!fileExists) {
-      // Create new CSV file with headers
-      fs.writeFileSync(csvFilePath, CSV_HEADERS + '\n', 'utf8')
+    if (fileExists) {
+      // Read existing CSV content
+      const existingContent = fs.readFileSync(csvFilePath, 'utf8')
+      if (existingContent && existingContent.trim().length > 0) {
+        csvContent = existingContent.trim()
+        // Ensure CSV ends with newline before appending
+        if (!csvContent.endsWith('\n')) {
+          csvContent += '\n'
+        }
+      }
     }
 
     // Append new row to CSV
     const csvRow = surveyDataToCSVRow(data)
-    fs.appendFileSync(csvFilePath, csvRow + '\n', 'utf8')
+    csvContent += csvRow + '\n'
+
+    // Write the complete CSV content (this ensures data integrity)
+    fs.writeFileSync(csvFilePath, csvContent, 'utf8')
 
     // Get file stats
     const stats = fs.statSync(csvFilePath)

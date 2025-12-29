@@ -32,8 +32,11 @@ function surveyDataToCSVRow(data: SurveyData): string {
     escapeCSV(data.feedbackReceived),
     escapeCSV(data.feedbackReceivedReason),
     escapeCSV(data.feedbackEasier),
-    escapeCSV(data.leadershipDifferent),
     escapeCSV(data.leadershipValue),
+    escapeCSV(data.leadershipDifferent),
+    escapeCSV(data.toolsEnhancing),
+    escapeCSV(data.sadhanaRegularity),
+    escapeCSV(data.innerGrowthSupport),
     escapeCSV(data.greatYear),
     escapeCSV(data.anythingElse),
   ]
@@ -60,8 +63,11 @@ const CSV_HEADERS = [
   'Feedback Received',
   'Feedback Received Reason',
   'Feedback Easier',
-  'Leadership Different',
   'Leadership Value',
+  'Leadership Different',
+  'Tools Enhancing',
+  'Sadhana Regularity',
+  'Inner Growth Support',
   'Great Year',
   'Anything Else',
 ].join(',')
@@ -139,7 +145,22 @@ export async function POST(request: NextRequest) {
           .download(fileName)
 
         if (existingFile && !downloadError) {
-          csvContent = await existingFile.text()
+          const existingContent = await existingFile.text()
+          // Ensure we have valid CSV content
+          if (existingContent && existingContent.trim().length > 0) {
+            csvContent = existingContent.trim()
+            // Ensure CSV ends with newline before appending
+            if (!csvContent.endsWith('\n')) {
+              csvContent += '\n'
+            }
+            // Log for debugging
+            const existingRowCount = csvContent.split('\n').filter(line => line.trim().length > 0).length - 1 // -1 for header
+            console.log(`Found existing CSV with ${existingRowCount} rows`)
+          } else {
+            console.log('Existing file is empty, starting fresh')
+          }
+        } else if (downloadError) {
+          console.log('Error downloading existing file (will create new):', downloadError.message)
         }
       } catch (e: any) {
         // File doesn't exist yet, that's okay - we'll create it with headers
@@ -147,20 +168,31 @@ export async function POST(request: NextRequest) {
       }
 
       // Append new row
-      csvContent += surveyDataToCSVRow(data) + '\n'
+      const newRow = surveyDataToCSVRow(data)
+      csvContent += newRow + '\n'
 
-      // Upload updated CSV
-      const { error: uploadError } = await supabase.storage
+      // Log final content length for debugging
+      const finalRowCount = csvContent.split('\n').filter(line => line.trim().length > 0).length - 1 // -1 for header
+      console.log(`Uploading CSV with ${finalRowCount} total rows (including new entry)`)
+
+      // Convert to Blob for upload
+      const csvBlob = new Blob([csvContent], { type: 'text/csv' })
+
+      // Upload updated CSV with explicit cache control
+      const { error: uploadError, data: uploadData } = await supabase.storage
         .from('survey-data')
-        .upload(fileName, csvContent, {
+        .upload(fileName, csvBlob, {
           contentType: 'text/csv',
           upsert: true, // Overwrite if exists
+          cacheControl: 'no-cache', // Prevent caching issues
         })
 
       if (uploadError) {
         console.error('Upload error:', uploadError)
         throw new Error(`Failed to upload CSV: ${uploadError.message}`)
       }
+
+      console.log('CSV uploaded successfully:', uploadData?.path)
 
       // Send notification email (non-blocking - won't fail if email fails)
       sendNotificationEmail(data).catch((err) => {

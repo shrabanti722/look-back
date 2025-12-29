@@ -50,7 +50,7 @@ export default function Home() {
 
   const handleSubmit = async (data: SurveyData) => {
     try {
-      // Save to CSV in cloud storage (Supabase)
+      // Save to CSV in cloud
       const response = await fetch('/api/save-to-csv-cloud', {
         method: 'POST',
         headers: {
