@@ -136,14 +136,25 @@ export async function POST(request: NextRequest) {
     
     const resend = new Resend(process.env.RESEND_API_KEY)
     
-    // Send email with the survey response
-    const emailResult = await resend.emails.send({
+    // Validate email format for replyTo
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    const isValidEmail = data.email && emailRegex.test(data.email)
+    
+    // Prepare email options
+    const emailOptions: any = {
       from: process.env.RESEND_FROM_EMAIL || 'Survey <onboarding@resend.dev>',
       to: recipientEmail,
       subject: subject,
       text: emailContent,
-      replyTo: data.email, // Allow replying directly to the respondent
-    })
+    }
+    
+    // Only add replyTo if email is valid
+    if (isValidEmail) {
+      emailOptions.replyTo = data.email
+    }
+    
+    // Send email with the survey response
+    const emailResult = await resend.emails.send(emailOptions)
 
     if (emailResult.error) {
       throw new Error(`Failed to send email: ${emailResult.error.message}`)

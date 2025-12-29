@@ -6,17 +6,20 @@ import { SurveyData } from '@/app/page'
 
 interface SurveyFormProps {
   onSubmit: (data: SurveyData) => void
+  initialData?: Partial<SurveyData> | null
 }
 
 const SECTIONS = [
-  'Basic Info',
-  'Looking Back',
-  'Friction & Struggles',
-  'Growth & Development',
-  'Working with Peers',
-  'Leadership Support',
-  'Looking Ahead',
-  'Final',
+  { name: 'Basic Info', emoji: '👤', isIntro: false },
+  { name: 'Welcome', emoji: '✨', isIntro: true },
+  { name: '🔍 Looking Back on the Year', emoji: '🔍', isIntro: false },
+  { name: '🧱 Friction, Struggles, and Constraints', emoji: '🧱', isIntro: false },
+  { name: '🚀 Growth and Development', emoji: '🚀', isIntro: false },
+  { name: '🤝 Working with Peers', emoji: '🤝', isIntro: false },
+  { name: '🧭 Leadership Support & Feedback', emoji: '🧭', isIntro: false },
+  { name: '🌟 Inner Growth', emoji: '🌟', isIntro: false },
+  { name: '🌟 Looking Ahead', emoji: '🌟', isIntro: false },
+  { name: 'Final', emoji: '✅', isIntro: false },
 ]
 
 const FEEDBACK_COMFORT_OPTIONS = [
@@ -46,13 +49,26 @@ const FEEDBACK_RECEIVED_OPTIONS = [
   'Rarely or never',
 ]
 
-export default function SurveyForm({ onSubmit }: SurveyFormProps) {
+const TOOLS_ENHANCING_OPTIONS = [
+  'Yes',
+  'No',
+  'Not Really',
+]
+
+const SADHANA_REGULARITY_OPTIONS = [
+  'Happens almost everyday',
+  'Happens sometimes - on and off',
+  'Not really happening',
+  'Not applicable to me',
+]
+
+export default function SurveyForm({ onSubmit, initialData }: SurveyFormProps) {
   const [currentSection, setCurrentSection] = useState(0)
   const [formData, setFormData] = useState<SurveyData>({
-    name: '',
+    name: initialData?.name || '',
     email: '',
-    role: '',
-    product: '',
+    role: initialData?.role || '',
+    product: initialData?.product || '',
     proudOf: [''],
     meaningfulImpact: '',
     struggles: '',
@@ -66,8 +82,11 @@ export default function SurveyForm({ onSubmit }: SurveyFormProps) {
     feedbackReceived: '',
     feedbackReceivedReason: '',
     feedbackEasier: '',
-    leadershipDifferent: '',
     leadershipValue: '',
+    leadershipDifferent: '',
+    toolsEnhancing: '',
+    sadhanaRegularity: '',
+    innerGrowthSupport: '',
     greatYear: '',
     anythingElse: '',
   })
@@ -88,7 +107,15 @@ export default function SurveyForm({ onSubmit }: SurveyFormProps) {
         if (saved) {
           const parsed = JSON.parse(saved)
           if (parsed.formData) {
-            setFormData(parsed.formData)
+            // Merge with initialData, prioritizing saved data but filling in gaps
+            setFormData((prev) => ({
+              ...prev,
+              ...parsed.formData,
+              // Only use initialData if saved data doesn't have these fields
+              name: parsed.formData.name || prev.name,
+              role: parsed.formData.role || prev.role,
+              product: parsed.formData.product || prev.product,
+            }))
           }
           if (parsed.currentSection !== undefined) {
             setCurrentSection(parsed.currentSection)
@@ -96,6 +123,14 @@ export default function SurveyForm({ onSubmit }: SurveyFormProps) {
           if (parsed.lastSaved) {
             setLastSaved(new Date(parsed.lastSaved))
           }
+        } else if (initialData) {
+          // If no saved data, use initialData to update form
+          setFormData((prev) => ({
+            ...prev,
+            name: initialData.name || prev.name,
+            role: initialData.role || prev.role,
+            product: initialData.product || prev.product,
+          }))
         }
         // Mark initial load as complete after state updates have time to propagate
         setTimeout(() => {
@@ -106,7 +141,7 @@ export default function SurveyForm({ onSubmit }: SurveyFormProps) {
         isInitialLoadRef.current = false
       }
     }
-  }, [])
+  }, [initialData])
 
   // Helper function to save data to localStorage
   const saveToLocalStorage = useCallback(() => {
@@ -214,6 +249,12 @@ export default function SurveyForm({ onSubmit }: SurveyFormProps) {
   }
 
   const handleNext = () => {
+    // Validate Basic Info before proceeding to intro
+    if (currentSection === 0 && (!formData.name.trim() || !formData.email.trim())) {
+      alert('Please fill in your name and email before continuing.')
+      return
+    }
+    
     if (currentSection < SECTIONS.length - 1) {
       setCurrentSection(currentSection + 1)
       // Scroll to form content instead of top
@@ -262,9 +303,9 @@ export default function SurveyForm({ onSubmit }: SurveyFormProps) {
     switch (currentSection) {
       case 0: // Basic Info
         return (
-          <div className="space-y-6">
+          <div className="space-y-8">
             <div>
-              <label className="block text-sm font-semibold text-gray-800 mb-2">
+              <label className="block text-base font-semibold text-gray-800 mb-2">
                 Name <span className="text-red-500">*</span>
               </label>
               <input
@@ -277,7 +318,7 @@ export default function SurveyForm({ onSubmit }: SurveyFormProps) {
               />
             </div>
             <div>
-              <label className="block text-sm font-semibold text-gray-800 mb-2">
+              <label className="block text-base font-semibold text-gray-800 mb-2">
                 Email <span className="text-red-500">*</span>
               </label>
               <input
@@ -290,7 +331,7 @@ export default function SurveyForm({ onSubmit }: SurveyFormProps) {
               />
             </div>
             <div>
-              <label className="block text-sm font-semibold text-gray-800 mb-2">
+              <label className="block text-base font-semibold text-gray-800 mb-2">
                 Role
               </label>
               <input
@@ -303,8 +344,8 @@ export default function SurveyForm({ onSubmit }: SurveyFormProps) {
               />
             </div>
             <div>
-              <label className="block text-sm font-semibold text-gray-800 mb-2">
-                Product
+              <label className="block text-base font-semibold text-gray-800 mb-2">
+                Product Area / Team
               </label>
               <input
                 type="text"
@@ -318,15 +359,70 @@ export default function SurveyForm({ onSubmit }: SurveyFormProps) {
           </div>
         )
 
-      case 1: // Looking Back
+      case 1: // Personalized Intro
+        const displayName = formData.name || 'there'
+        const displayRole = formData.role ? ` as a ${formData.role}` : ''
+        const displayProduct = formData.product ? ` in the ${formData.product} team` : ''
+        
         return (
-          <div className="space-y-6">
+          <div className="space-y-8">
+            <div className="text-center">
+              <h3 className="text-3xl font-bold text-gray-800 mb-6">
+                Dear {displayName}, this is your Space to Reflect
+              </h3>
+              <p className="text-xl text-gray-700 leading-relaxed max-w-3xl mx-auto">
+                Think of this as a quiet pause to acknowledge your year — the work you did{displayRole}{displayProduct} — the effort you put in, the wins you had, and the struggles along the way ❤️
+              </p>
+            </div>
+
+            <div className="bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 rounded-2xl p-8 border border-blue-100 shadow-lg">
+              <h4 className="text-2xl font-semibold text-gray-800 mb-6 text-center">
+                A few notes before you start
+              </h4>
+              <div className="space-y-4">
+                <div className="flex items-start gap-4 bg-white/60 rounded-xl p-4 backdrop-blur-sm">
+                  <span className="text-3xl flex-shrink-0">⏱️</span>
+                  <p className="text-gray-700 text-lg flex-1 pt-1">
+                    <span className="font-bold">Expected time:</span> ~30 minutes
+                  </p>
+                </div>
+                <div className="flex items-start gap-4 bg-white/60 rounded-xl p-4 backdrop-blur-sm">
+                  <span className="text-3xl flex-shrink-0">✨</span>
+                  <p className="text-gray-700 text-lg flex-1 pt-1">
+                    Please feel free to <span className="font-bold">skip any questions</span> that don&apos;t resonate with you
+                  </p>
+                </div>
+                <div className="flex items-start gap-4 bg-white/60 rounded-xl p-4 backdrop-blur-sm">
+                  <span className="text-3xl flex-shrink-0">🔒</span>
+                  <p className="text-gray-700 text-lg flex-1 pt-1">
+                    This is a <span className="font-bold">safe space</span> — your inputs will not be shared with peers
+                  </p>
+                </div>
+                <div className="flex items-start gap-4 bg-white/60 rounded-xl p-4 backdrop-blur-sm">
+                  <span className="text-3xl flex-shrink-0">🎯</span>
+                  <p className="text-gray-700 text-lg flex-1 pt-1">
+                    The intent is <span className="font-bold">reflection and learning</span>, not evaluation
+                  </p>
+                </div>
+                <div className="mt-6 pt-6 border-t-2 border-gray-300 bg-white/80 rounded-xl p-5">
+                  <p className="text-base text-gray-700 italic text-center font-medium">
+                    There are no &ldquo;right&rdquo; answers. Specific and honest is more valuable than polished.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )
+
+      case 2: // Looking Back
+        return (
+          <div className="space-y-8">
             <div>
-              <label className="block text-sm font-semibold text-gray-800 mb-2">
+              <label className="block text-base font-semibold text-gray-800 mb-2">
                 What are you most proud of from this year? (1–3 things)
               </label>
-              <p className="text-xs text-gray-500 mb-3">
-                Think in terms of outcomes, impact, quality, or ownership—not just tasks.
+              <p className="text-xs text-gray-500 mb-3 italic">
+                <span className="font-semibold">Prompt:</span> Think in terms of outcomes, impact, quality, or ownership—not just tasks.
               </p>
               {formData.proudOf.map((item, index) => (
                 <div key={index} className="mb-3 flex gap-2">
@@ -360,11 +456,11 @@ export default function SurveyForm({ onSubmit }: SurveyFormProps) {
               )}
             </div>
             <div>
-              <label className="block text-sm font-semibold text-gray-800 mb-2">
+              <label className="block text-base font-semibold text-gray-800 mb-2">
                 What work of yours had a meaningful impact but may not be very visible?
               </label>
-              <p className="text-xs text-gray-500 mb-3">
-                This could include behind-the-scenes work, unblocking others, raising the bar, or holding things together.
+              <p className="text-xs text-gray-500 mb-3 italic">
+                <span className="font-semibold">Prompt:</span> This could include behind-the-scenes work, unblocking others, raising the bar, or holding things together.
               </p>
               <textarea
                 value={formData.meaningfulImpact}
@@ -378,11 +474,11 @@ export default function SurveyForm({ onSubmit }: SurveyFormProps) {
           </div>
         )
 
-      case 2: // Friction & Struggles
+      case 3: // Friction & Struggles
         return (
-          <div className="space-y-6">
+          <div className="space-y-8">
             <div>
-              <label className="block text-sm font-semibold text-gray-800 mb-2">
+              <label className="block text-base font-semibold text-gray-800 mb-2">
                 What did you struggle with?
               </label>
               <textarea
@@ -395,11 +491,11 @@ export default function SurveyForm({ onSubmit }: SurveyFormProps) {
               />
             </div>
             <div>
-              <label className="block text-sm font-semibold text-gray-800 mb-2">
+              <label className="block text-base font-semibold text-gray-800 mb-2">
                 What made your work harder than it needed to be this year?
               </label>
-              <p className="text-xs text-gray-500 mb-3">
-                Process, unclear priorities, dependencies, tooling, decision delays, structure, communication—anything that consistently slowed you down.
+              <p className="text-xs text-gray-500 mb-3 italic">
+                <span className="font-semibold">Prompt:</span> Process, unclear priorities, dependencies, tooling, decision delays, structure, communication—anything that consistently slowed you down.
               </p>
               <textarea
                 value={formData.workHarder}
@@ -413,11 +509,11 @@ export default function SurveyForm({ onSubmit }: SurveyFormProps) {
           </div>
         )
 
-      case 3: // Growth & Development
+      case 4: // Growth & Development
         return (
-          <div className="space-y-6">
+          <div className="space-y-8">
             <div>
-              <label className="block text-sm font-semibold text-gray-800 mb-2">
+              <label className="block text-base font-semibold text-gray-800 mb-2">
                 What did you personally learn or get better at this year?
               </label>
               <textarea
@@ -430,8 +526,8 @@ export default function SurveyForm({ onSubmit }: SurveyFormProps) {
               />
             </div>
             <div>
-              <label className="block text-sm font-semibold text-gray-800 mb-2">
-                Where do you want to grow next year, but feel under-supported today?
+              <label className="block text-base font-semibold text-gray-800 mb-2">
+                In which area(s) do you aspire to grow next year, and feel under-supported today?
               </label>
               <textarea
                 value={formData.growthUnsupported}
@@ -445,16 +541,18 @@ export default function SurveyForm({ onSubmit }: SurveyFormProps) {
           </div>
         )
 
-      case 4: // Working with Peers
+      case 5: // Working with Peers
         return (
-          <div className="space-y-6">
+          <div className="space-y-8">
             <div>
-              <label className="block text-sm font-semibold text-gray-800 mb-2">
+              <label className="block text-base font-semibold text-gray-800 mb-2">
                 How comfortable do you feel giving direct, constructive feedback to peers when something isn&apos;t working?
               </label>
               <div className="space-y-2 mt-3">
                 {FEEDBACK_COMFORT_OPTIONS.map((option) => (
-                  <label key={option} className="flex items-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-blue-300 cursor-pointer transition-colors">
+                  <label key={option} className={`flex items-center p-3 border rounded-lg hover:bg-gray-50 hover:border-blue-300 cursor-pointer transition-colors ${
+                    formData.feedbackComfort === option ? 'bg-yellow-100 border-yellow-400' : 'border-gray-200'
+                  }`}>
                     <input
                       type="radio"
                       name="feedbackComfort"
@@ -463,13 +561,13 @@ export default function SurveyForm({ onSubmit }: SurveyFormProps) {
                       onChange={(e) => updateField('feedbackComfort', e.target.value)}
                       className="mr-3 w-4 h-4 text-blue-600 focus:ring-blue-500"
                     />
-                    <span className="text-gray-900 font-medium">{option}</span>
+                    <span className="text-gray-900 text-sm font-medium">{option}</span>
                   </label>
                 ))}
               </div>
             </div>
             <div>
-              <label className="block text-sm font-semibold text-gray-800 mb-2">
+              <label className="block text-base font-semibold text-gray-800 mb-2">
                 What makes it easier or harder? (Optional)
               </label>
               <textarea
@@ -482,19 +580,21 @@ export default function SurveyForm({ onSubmit }: SurveyFormProps) {
               />
             </div>
             <div>
-              <label className="block text-sm font-semibold text-gray-800 mb-2">
+              <label className="block text-base font-semibold text-gray-800 mb-2">
                 What typically stops you from giving feedback to a peer when you feel it&apos;s needed?
               </label>
               <div className="space-y-2 mt-3">
                 {FEEDBACK_STOPS_OPTIONS.map((option) => (
-                  <label key={option} className="flex items-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-blue-300 cursor-pointer transition-colors">
+                  <label key={option} className={`flex items-center p-3 border rounded-lg hover:bg-gray-50 hover:border-blue-300 cursor-pointer transition-colors ${
+                    formData.feedbackStops?.includes(option) ? 'bg-yellow-100 border-yellow-400' : 'border-gray-200'
+                  }`}>
                     <input
                       type="checkbox"
                       checked={formData.feedbackStops?.includes(option) || false}
                       onChange={() => toggleFeedbackStop(option)}
                       className="mr-3 w-4 h-4 text-blue-600 focus:ring-blue-500 rounded"
                     />
-                    <span className="text-gray-900 font-medium">{option}</span>
+                    <span className="text-gray-900 text-sm font-medium">{option}</span>
                   </label>
                 ))}
               </div>
@@ -512,12 +612,14 @@ export default function SurveyForm({ onSubmit }: SurveyFormProps) {
               )}
             </div>
             <div>
-              <label className="block text-sm font-semibold text-gray-800 mb-2">
+              <label className="block text-base font-semibold text-gray-800 mb-2">
                 When peers give you feedback, how does it usually happen today?
               </label>
               <div className="space-y-2 mt-3">
                 {FEEDBACK_RECEIVED_OPTIONS.map((option) => (
-                  <label key={option} className="flex items-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-blue-300 cursor-pointer transition-colors">
+                  <label key={option} className={`flex items-center p-3 border rounded-lg hover:bg-gray-50 hover:border-blue-300 cursor-pointer transition-colors ${
+                    formData.feedbackReceived === option ? 'bg-yellow-100 border-yellow-400' : 'border-gray-200'
+                  }`}>
                     <input
                       type="radio"
                       name="feedbackReceived"
@@ -526,13 +628,13 @@ export default function SurveyForm({ onSubmit }: SurveyFormProps) {
                       onChange={(e) => updateField('feedbackReceived', e.target.value)}
                       className="mr-3 w-4 h-4 text-blue-600 focus:ring-blue-500"
                     />
-                    <span className="text-gray-900 font-medium">{option}</span>
+                    <span className="text-gray-900 text-sm font-medium">{option}</span>
                   </label>
                 ))}
               </div>
             </div>
             <div>
-              <label className="block text-sm font-semibold text-gray-800 mb-2">
+              <label className="block text-base font-semibold text-gray-800 mb-2">
                 What would make it easier or safer for you to give and receive peer feedback next year?
               </label>
               <textarea
@@ -547,25 +649,12 @@ export default function SurveyForm({ onSubmit }: SurveyFormProps) {
           </div>
         )
 
-      case 5: // Leadership Support
+      case 6: // Leadership Support
         return (
-          <div className="space-y-6">
+          <div className="space-y-8">
             <div>
-              <label className="block text-sm font-semibold text-gray-800 mb-2">
-                What are the few things I could do differently to help you do your best work?
-              </label>
-              <textarea
-                value={formData.leadershipDifferent}
-                onChange={(e) => updateField('leadershipDifferent', e.target.value)}
-                onBlur={handleFieldBlur}
-                rows={5}
-                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white resize-y transition-all"
-                placeholder="Share your thoughts..."
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-semibold text-gray-800 mb-2">
-                What is the one thing I am doing that adds most value to you and your work, and I should continue doing?
+              <label className="block text-base font-semibold text-gray-800 mb-2">
+                What is the one thing I / your immediate lead are doing that adds most value to you and your work, and should continue doing?
               </label>
               <textarea
                 value={formData.leadershipValue}
@@ -576,14 +665,86 @@ export default function SurveyForm({ onSubmit }: SurveyFormProps) {
                 placeholder="Share your thoughts..."
               />
             </div>
+            <div>
+              <label className="block text-base font-semibold text-gray-800 mb-2">
+                What are the few things I / your immediate lead could do differently to help you do your best work?
+              </label>
+              <textarea
+                value={formData.leadershipDifferent}
+                onChange={(e) => updateField('leadershipDifferent', e.target.value)}
+                onBlur={handleFieldBlur}
+                rows={5}
+                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white resize-y transition-all"
+                placeholder="Share your thoughts..."
+              />
+            </div>
           </div>
         )
 
-      case 6: // Looking Ahead
+      case 7: // Inner Growth
         return (
-          <div className="space-y-6">
+          <div className="space-y-8">
             <div>
-              <label className="block text-sm font-semibold text-gray-800 mb-2">
+              <label className="block text-base font-semibold text-gray-800 mb-2">
+                Are aspects of this space and the tools that Sadhguru offers enhancing your life?
+              </label>
+              <div className="space-y-2 mt-3">
+                {TOOLS_ENHANCING_OPTIONS.map((option) => (
+                  <label key={option} className="flex items-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-blue-300 cursor-pointer transition-colors">
+                    <input
+                      type="radio"
+                      name="toolsEnhancing"
+                      value={option}
+                      checked={formData.toolsEnhancing === option}
+                      onChange={(e) => updateField('toolsEnhancing', e.target.value)}
+                      className="mr-3 w-4 h-4 text-blue-600 focus:ring-blue-500"
+                    />
+                    <span className="text-gray-900 text-sm font-medium">{option}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+            <div>
+              <label className="block text-base font-semibold text-gray-800 mb-2">
+                How regular are you with your Sadhana?
+              </label>
+              <div className="space-y-2 mt-3">
+                {SADHANA_REGULARITY_OPTIONS.map((option) => (
+                  <label key={option} className="flex items-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-blue-300 cursor-pointer transition-colors">
+                    <input
+                      type="radio"
+                      name="sadhanaRegularity"
+                      value={option}
+                      checked={formData.sadhanaRegularity === option}
+                      onChange={(e) => updateField('sadhanaRegularity', e.target.value)}
+                      className="mr-3 w-4 h-4 text-blue-600 focus:ring-blue-500"
+                    />
+                    <span className="text-gray-900 text-sm font-medium">{option}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+            <div>
+              <label className="block text-base font-semibold text-gray-800 mb-2">
+                Any support you would like on this aspect?
+              </label>
+              <textarea
+                value={formData.innerGrowthSupport}
+                onChange={(e) => updateField('innerGrowthSupport', e.target.value)}
+                onBlur={handleFieldBlur}
+                rows={5}
+                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white resize-y transition-all"
+                placeholder="Share your thoughts..."
+              />
+            </div>
+          </div>
+        )
+
+      case 8: // Looking Ahead
+        return (
+          <div className="space-y-8">
+            <div>
+              <label className="block text-base font-semibold text-gray-800 mb-2">
                 If next year were a great year for you, what would be meaningfully different?
               </label>
               <textarea
@@ -596,7 +757,7 @@ export default function SurveyForm({ onSubmit }: SurveyFormProps) {
               />
             </div>
             <div>
-              <label className="block text-sm font-semibold text-gray-800 mb-2">
+              <label className="block text-base font-semibold text-gray-800 mb-2">
                 Anything else?
               </label>
               <textarea
@@ -611,9 +772,9 @@ export default function SurveyForm({ onSubmit }: SurveyFormProps) {
           </div>
         )
 
-      case 7: // Final/Review
+      case 9: // Final/Review
         return (
-          <div className="space-y-6">
+          <div className="space-y-8">
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
               <h3 className="text-lg font-semibold text-blue-900 mb-2">
                 Ready to submit?
@@ -635,67 +796,125 @@ export default function SurveyForm({ onSubmit }: SurveyFormProps) {
     }
   }
 
+  const isIntroSection = SECTIONS[currentSection]?.isIntro
+
   return (
     <div className="min-h-screen py-8 px-4 pb-24">
       <div className="max-w-3xl mx-auto">
-        {/* Progress Bar */}
-        <div className="mb-8 bg-white/80 backdrop-blur-sm rounded-xl p-4 shadow-sm border border-gray-100">
-          <div className="flex justify-between items-center mb-3">
-            <div className="flex items-center gap-3">
-              <span className="text-sm font-semibold text-gray-700">
-                Section {currentSection + 1} of {SECTIONS.length}
-              </span>
-              {lastSaved && (
-                <span className="text-xs text-gray-500 flex items-center gap-1">
-                  <svg className="w-3 h-3 text-green-500" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                  </svg>
-                  Saved {lastSaved.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+        {/* Progress Bar - Hidden for intro section */}
+        {!isIntroSection && (() => {
+          const actualSection = currentSection > 1 ? currentSection - 1 : currentSection
+          const totalSections = SECTIONS.length - 1 // Exclude intro from count
+          const progressPercent = Math.round((actualSection / totalSections) * 100)
+          
+          return (
+            <div className="mb-8 bg-white/80 backdrop-blur-sm rounded-xl p-4 shadow-sm border border-gray-100">
+              <div className="flex justify-between items-center mb-3">
+                <div className="flex items-center gap-3">
+                  <span className="text-sm font-semibold text-gray-700">
+                    Section {actualSection + 1} of {totalSections}
+                  </span>
+                  <span className="text-sm text-gray-600 ml-2">
+                    {SECTIONS[currentSection].name}
+                  </span>
+                  {lastSaved && (
+                    <span className="text-xs text-gray-500 flex items-center gap-1">
+                      <svg className="w-3 h-3 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                      </svg>
+                      Saved {lastSaved.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                  )}
+                </div>
+                <span className="text-sm font-medium text-gray-600 bg-gray-100 px-3 py-1 rounded-full">
+                  {progressPercent}%
                 </span>
-              )}
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+                <motion.div
+                  className="bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 h-3 rounded-full shadow-sm"
+                  initial={{ width: 0 }}
+                  animate={{ width: `${progressPercent}%` }}
+                  transition={{ duration: 0.4, ease: "easeOut" }}
+                />
+              </div>
             </div>
-            <span className="text-sm font-medium text-gray-600 bg-gray-100 px-3 py-1 rounded-full">
-              {Math.round(((currentSection + 1) / SECTIONS.length) * 100)}%
-            </span>
-          </div>
-          <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
-            <motion.div
-              className="bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 h-3 rounded-full shadow-sm"
-              initial={{ width: 0 }}
-              animate={{ width: `${((currentSection + 1) / SECTIONS.length) * 100}%` }}
-              transition={{ duration: 0.4, ease: "easeOut" }}
-            />
-          </div>
-        </div>
+          )
+        })()}
 
-        {/* Section Title */}
-        <motion.div
-          key={currentSection}
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: 10 }}
-          transition={{ duration: 0.3 }}
-          className="mb-6"
-        >
-          <div className="flex items-center gap-2 mb-3">
-            <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-600 to-purple-600 flex items-center justify-center text-white font-bold text-sm">
-              {currentSection + 1}
+        {/* Section Title - Hidden for intro section */}
+        {!isIntroSection && (
+          <motion.div
+            key={currentSection}
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 10 }}
+            transition={{ duration: 0.3 }}
+            className="mb-6"
+          >
+            <div className="flex items-center gap-2 mb-3">
+              <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-600 to-purple-600 flex items-center justify-center text-white font-bold text-sm">
+                {currentSection > 1 ? currentSection - 1 : currentSection + 1}
+              </div>
+              <h2 className="text-3xl font-bold text-gray-800">
+                {SECTIONS[currentSection].name}
+              </h2>
             </div>
-            <h2 className="text-3xl font-bold text-gray-800">
-              {SECTIONS[currentSection]}
-            </h2>
-          </div>
-          <p className="text-gray-600 text-lg ml-12">
-            {currentSection === 0 && 'Let\'s start with some basic information'}
-            {currentSection === 1 && 'Reflect on your achievements and impact'}
-            {currentSection === 2 && 'Share what challenged you'}
-            {currentSection === 3 && 'Think about your growth journey'}
-            {currentSection === 4 && 'Reflect on peer relationships'}
-            {currentSection === 5 && 'Share feedback for leadership'}
-            {currentSection === 6 && 'Envision your future'}
-            {currentSection === 7 && 'Review and submit'}
-          </p>
-        </motion.div>
+            <p className="text-gray-600 text-lg ml-12">
+              {currentSection === 0 && 'Let\'s start with some basic information'}
+              {currentSection === 2 && (
+                <>
+                  <div className="italic text-gray-500 mb-2">
+                    &ldquo;It&apos;s not the amount of action but the depth of experience that makes life rich and fulfilling.&rdquo; - Sadhguru
+                  </div>
+                  Reflect on your achievements and impact
+                </>
+              )}
+              {currentSection === 3 && (
+                <>
+                  <div className="italic text-gray-500 mb-2">
+                    &ldquo;If you turn inward, you will find a space where there is a solution for everything.&rdquo; - Sadhguru
+                  </div>
+                  Share what challenged you
+                </>
+              )}
+              {currentSection === 4 && (
+                <>
+                  <div className="italic text-gray-500 mb-2">
+                    &ldquo;Anything you do willingly will become a great pleasure and a process of growth for you.&rdquo; - Sadhguru
+                  </div>
+                  Think about your growth journey
+                </>
+              )}
+              {currentSection === 5 && (
+                <>
+                  <div className="italic text-gray-500 mb-2">
+                    &ldquo;If you think everyone is out to get you, you will become small. Trust is important.&rdquo; - Sadhguru
+                  </div>
+                  Reflect on peer relationships
+                </>
+              )}
+              {currentSection === 6 && 'Share feedback for leadership'}
+              {currentSection === 7 && (
+                <>
+                  <div className="italic text-gray-500 mb-2">
+                    &ldquo;Success will come easy once you function at your full potential.&rdquo; - Sadhguru
+                  </div>
+                  Reflect on your inner growth journey
+                </>
+              )}
+              {currentSection === 8 && (
+                <>
+                  <div className="italic text-gray-500 mb-2">
+                    &ldquo;It is good to have a plan, but it is more important to have a purpose. If you have a purpose, plan will evolve and manifest.&rdquo; - Sadhguru
+                  </div>
+                  Envision your future
+                </>
+              )}
+              {currentSection === 9 && 'Review and submit'}
+            </p>
+          </motion.div>
+        )}
 
         {/* Form Content */}
         <motion.div
@@ -735,11 +954,17 @@ export default function SurveyForm({ onSubmit }: SurveyFormProps) {
               Previous
             </button>
 
-            <div className="flex items-center gap-2 text-sm text-gray-600 bg-gray-100 px-4 py-2 rounded-full">
-              <span className="font-semibold">{currentSection + 1}</span>
-              <span className="text-gray-400">/</span>
-              <span>{SECTIONS.length}</span>
-            </div>
+            {!isIntroSection && (() => {
+              const actualSection = currentSection > 1 ? currentSection - 1 : currentSection
+              const totalSections = SECTIONS.length - 1
+              return (
+                <div className="flex items-center gap-2 text-sm text-gray-600 bg-gray-100 px-4 py-2 rounded-full">
+                  <span className="font-semibold">{actualSection + 1}</span>
+                  <span className="text-gray-400">/</span>
+                  <span>{totalSections}</span>
+                </div>
+              )
+            })()}
 
             {currentSection < SECTIONS.length - 1 ? (
               <button

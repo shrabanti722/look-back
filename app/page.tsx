@@ -27,9 +27,13 @@ export type SurveyData = {
   feedbackReceived: string
   feedbackReceivedReason: string
   feedbackEasier: string
-  // Leadership
-  leadershipDifferent: string
+  // Leadership (reordered: value first, then different)
   leadershipValue: string
+  leadershipDifferent: string
+  // Inner Growth
+  toolsEnhancing: string
+  sadhanaRegularity: string
+  innerGrowthSupport: string
   // Looking Ahead
   greatYear: string
   anythingElse: string
@@ -38,6 +42,7 @@ export type SurveyData = {
 export default function Home() {
   const [step, setStep] = useState<'welcome' | 'form' | 'success'>('welcome')
   const [surveyData, setSurveyData] = useState<SurveyData | null>(null)
+  const [initialFormData, setInitialFormData] = useState<Partial<SurveyData> | null>(null)
 
   const handleStart = () => {
     setStep('form')
@@ -71,7 +76,7 @@ export default function Home() {
   return (
     <main className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
       {step === 'welcome' && <WelcomeScreen onStart={handleStart} />}
-      {step === 'form' && <SurveyForm onSubmit={handleSubmit} />}
+      {step === 'form' && <SurveyForm onSubmit={handleSubmit} initialData={initialFormData} />}
       {step === 'success' && <SuccessScreen data={surveyData} />}
     </main>
   )

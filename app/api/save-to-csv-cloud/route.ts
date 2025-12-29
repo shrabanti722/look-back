@@ -86,13 +86,21 @@ Email: ${data.email}
 Submitted on: ${new Date().toLocaleString()}
 `
 
-    const result = await resend.emails.send({
+    // Validate email format for replyTo
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    const isValidEmail = data.email && emailRegex.test(data.email)
+    
+    // Prepare email options
+    const emailOptions: any = {
       from: fromEmail,
       to: recipientEmail,
       subject: `New Survey Submission - ${data.name}`,
       text: emailContent,
-      replyTo: data.email, // Allow replying directly to the respondent
-    })
+      // Only add replyTo if email is valid (Resend requires valid email format)
+      ...(isValidEmail && { replyTo: data.email }),
+    }
+
+    const result = await resend.emails.send(emailOptions)
 
     return result
   } catch (error: any) {
