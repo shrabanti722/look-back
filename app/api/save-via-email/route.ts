@@ -84,13 +84,29 @@ function formatSurveyDataForEmail(data: SurveyData): string {
   // Leadership Support & Feedback
   content += `${'='.repeat(50)}\n\n`
   content += `LEADERSHIP SUPPORT & FEEDBACK\n\n`
+  if (data.leadershipValue) {
+    content += `What is the one thing I / your immediate lead are doing that adds most value to you and your work, and should continue doing?\n`
+    content += `${data.leadershipValue}\n\n`
+  }
   if (data.leadershipDifferent) {
-    content += `What are the few things I could do differently to help you do your best work?\n`
+    content += `What are the few things I / your immediate lead could do differently to help you do your best work?\n`
     content += `${data.leadershipDifferent}\n\n`
   }
-  if (data.leadershipValue) {
-    content += `What is the one thing I am doing that adds most value to you and your work, and I should continue doing?\n`
-    content += `${data.leadershipValue}\n\n`
+
+  // Inner Growth
+  content += `${'='.repeat(50)}\n\n`
+  content += `INNER GROWTH\n\n`
+  if (data.toolsEnhancing) {
+    content += `Are aspects of this space and the tools that Sadhguru offers enhancing your life?\n`
+    content += `${data.toolsEnhancing}\n\n`
+  }
+  if (data.sadhanaRegularity) {
+    content += `How regular are you with your Sadhana?\n`
+    content += `${data.sadhanaRegularity}\n\n`
+  }
+  if (data.innerGrowthSupport) {
+    content += `Any support you would like on this aspect?\n`
+    content += `${data.innerGrowthSupport}\n\n`
   }
 
   // Looking Ahead

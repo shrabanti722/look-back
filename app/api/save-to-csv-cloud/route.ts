@@ -72,7 +72,132 @@ const CSV_HEADERS = [
   'Anything Else',
 ].join(',')
 
-// Send notification email with just name and email
+// Format survey data for email notification
+function formatSurveyDataForEmail(data: SurveyData): string {
+  let content = `2025 - Look Back Survey Response\n\n`
+  content += `Name: ${data.name}\n`
+  content += `Email: ${data.email}\n`
+  if (data.role) content += `Role: ${data.role}\n`
+  if (data.product) content += `Product Area: ${data.product}\n`
+  content += `\n${'='.repeat(50)}\n\n`
+
+  // Looking Back
+  content += `🔍 LOOKING BACK ON THE YEAR\n\n`
+  if (data.proudOf && data.proudOf.length > 0) {
+    content += `What are you most proud of from this year? (1–3 things)\n`
+    data.proudOf.forEach((item, index) => {
+      if (item.trim()) {
+        content += `${index + 1}. ${item}\n`
+      }
+    })
+    content += `\n`
+  }
+  if (data.meaningfulImpact) {
+    content += `What work of yours had a meaningful impact but may not be very visible?\n`
+    content += `${data.meaningfulImpact}\n\n`
+  }
+
+  // Friction, Struggles, and Constraints
+  content += `${'='.repeat(50)}\n\n`
+  content += `🧱 FRICTION, STRUGGLES, AND CONSTRAINTS\n\n`
+  if (data.struggles) {
+    content += `What did you struggle with?\n`
+    content += `${data.struggles}\n\n`
+  }
+  if (data.workHarder) {
+    content += `What made your work harder than it needed to be this year?\n`
+    content += `${data.workHarder}\n\n`
+  }
+
+  // Growth and Development
+  content += `${'='.repeat(50)}\n\n`
+  content += `🚀 GROWTH AND DEVELOPMENT\n\n`
+  if (data.learned) {
+    content += `What did you personally learn or get better at this year?\n`
+    content += `${data.learned}\n\n`
+  }
+  if (data.growthUnsupported) {
+    content += `In which area(s) do you aspire to grow next year, and feel under-supported today?\n`
+    content += `${data.growthUnsupported}\n\n`
+  }
+
+  // Working with Peers
+  content += `${'='.repeat(50)}\n\n`
+  content += `🤝 WORKING WITH PEERS\n\n`
+  if (data.feedbackComfort) {
+    content += `How comfortable do you feel giving direct, constructive feedback to peers when something isn't working?\n`
+    content += `${data.feedbackComfort}\n\n`
+  }
+  if (data.feedbackComfortReason) {
+    content += `What makes it easier or harder?\n`
+    content += `${data.feedbackComfortReason}\n\n`
+  }
+  if (data.feedbackStops && data.feedbackStops.length > 0) {
+    content += `What typically stops you from giving feedback to a peer when you feel it's needed?\n`
+    data.feedbackStops.forEach((stop) => {
+      content += `• ${stop}\n`
+    })
+    if (data.feedbackStopsOther) {
+      content += `  - ${data.feedbackStopsOther}\n`
+    }
+    content += `\n`
+  }
+  if (data.feedbackReceived) {
+    content += `When peers give you feedback, how does it usually happen today?\n`
+    content += `${data.feedbackReceived}\n\n`
+  }
+  if (data.feedbackEasier) {
+    content += `What would make it easier or safer for you to give and receive peer feedback next year?\n`
+    content += `${data.feedbackEasier}\n\n`
+  }
+
+  // Leadership Support & Feedback
+  content += `${'='.repeat(50)}\n\n`
+  content += `🧭 LEADERSHIP SUPPORT & FEEDBACK\n\n`
+  if (data.leadershipValue) {
+    content += `What is the one thing I / your immediate lead are doing that adds most value to you and your work, and should continue doing?\n`
+    content += `${data.leadershipValue}\n\n`
+  }
+  if (data.leadershipDifferent) {
+    content += `What are the few things I / your immediate lead could do differently to help you do your best work?\n`
+    content += `${data.leadershipDifferent}\n\n`
+  }
+
+  // Inner Growth
+  content += `${'='.repeat(50)}\n\n`
+  content += `🌟 INNER GROWTH\n\n`
+  if (data.toolsEnhancing) {
+    content += `Are aspects of this space and the tools that Sadhguru offers enhancing your life?\n`
+    content += `${data.toolsEnhancing}\n\n`
+  }
+  if (data.sadhanaRegularity) {
+    content += `How regular are you with your Sadhana?\n`
+    content += `${data.sadhanaRegularity}\n\n`
+  }
+  if (data.innerGrowthSupport) {
+    content += `Any support you would like on this aspect?\n`
+    content += `${data.innerGrowthSupport}\n\n`
+  }
+
+  // Looking Ahead
+  content += `${'='.repeat(50)}\n\n`
+  content += `🌟 LOOKING AHEAD\n\n`
+  if (data.greatYear) {
+    content += `If next year were a great year for you, what would be meaningfully different?\n`
+    content += `${data.greatYear}\n\n`
+  }
+  if (data.anythingElse) {
+    content += `Anything else?\n`
+    content += `${data.anythingElse}\n\n`
+  }
+
+  content += `\n${'='.repeat(50)}\n`
+  content += `\nSubmitted on: ${new Date().toLocaleString()}\n`
+
+  return content
+}
+
+// Send notification email with all survey responses
 async function sendNotificationEmail(data: SurveyData) {
   // Only send if email is configured
   if (!process.env.RESEND_API_KEY || !process.env.SURVEY_RECIPIENT_EMAIL) {
@@ -84,13 +209,7 @@ async function sendNotificationEmail(data: SurveyData) {
     const recipientEmail = process.env.SURVEY_RECIPIENT_EMAIL
     const fromEmail = process.env.RESEND_FROM_EMAIL || 'Survey <onboarding@resend.dev>'
 
-    const emailContent = `New Survey Submission
-
-Name: ${data.name}
-Email: ${data.email}
-
-Submitted on: ${new Date().toLocaleString()}
-`
+    const emailContent = formatSurveyDataForEmail(data)
 
     // Validate email format for replyTo
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
