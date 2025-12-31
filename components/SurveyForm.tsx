@@ -419,7 +419,7 @@ export default function SurveyForm({ onSubmit, initialData }: SurveyFormProps) {
           <div className="space-y-8">
             <div>
               <label className="block text-base font-semibold text-gray-800 mb-2">
-                What are you most proud of from this year? (1–3 things)
+                What are you most proud of from this year?
               </label>
               <p className="text-xs text-gray-500 mb-3 italic">
                 <span className="font-semibold">Prompt:</span> Think in terms of outcomes, impact, quality, or ownership—not just tasks.
@@ -445,15 +445,13 @@ export default function SurveyForm({ onSubmit, initialData }: SurveyFormProps) {
                   )}
                 </div>
               ))}
-              {formData.proudOf.length < 3 && (
-                <button
-                  type="button"
-                  onClick={addProudOf}
-                  className="text-blue-600 hover:text-blue-700 text-sm font-medium"
-                >
-                  + Add another
-                </button>
-              )}
+              <button
+                type="button"
+                onClick={addProudOf}
+                className="text-blue-600 hover:text-blue-700 text-sm font-medium"
+              >
+                + Add another achievement
+              </button>
             </div>
             <div>
               <label className="block text-base font-semibold text-gray-800 mb-2">

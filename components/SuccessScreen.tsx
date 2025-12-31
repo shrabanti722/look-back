@@ -2,7 +2,7 @@
 
 import { motion } from 'framer-motion'
 import { SurveyData } from '@/app/page'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 interface SuccessScreenProps {
   data: SurveyData | null
@@ -10,6 +10,102 @@ interface SuccessScreenProps {
 
 export default function SuccessScreen({ data }: SuccessScreenProps) {
   const [imageError, setImageError] = useState(false)
+
+  // Confetti effect on mount
+  useEffect(() => {
+    const triggerConfetti = async () => {
+      try {
+        // Dynamically import canvas-confetti to avoid SSR issues
+        const confetti = (await import('canvas-confetti')).default
+        
+        // Create a canvas element for confetti
+        const canvas = document.createElement('canvas')
+        canvas.style.position = 'fixed'
+        canvas.style.top = '0'
+        canvas.style.left = '0'
+        canvas.style.width = '100%'
+        canvas.style.height = '100%'
+        canvas.style.pointerEvents = 'none'
+        canvas.style.zIndex = '9999'
+        document.body.appendChild(canvas)
+
+        const myConfetti = confetti.create(canvas, {
+          resize: true,
+          useWorker: true,
+        })
+
+        // Big initial burst from center
+        myConfetti({
+          particleCount: 150,
+          spread: 80,
+          origin: { y: 0.5, x: 0.5 },
+          colors: ['#3b82f6', '#8b5cf6', '#ec4899', '#10b981', '#f59e0b', '#ef4444'],
+          gravity: 0.8,
+        })
+
+        // Multiple bursts from different positions
+        setTimeout(() => {
+          myConfetti({
+            particleCount: 100,
+            angle: 60,
+            spread: 70,
+            origin: { x: 0, y: 0.6 },
+            colors: ['#3b82f6', '#8b5cf6', '#ec4899'],
+          })
+        }, 250)
+
+        setTimeout(() => {
+          myConfetti({
+            particleCount: 100,
+            angle: 120,
+            spread: 70,
+            origin: { x: 1, y: 0.6 },
+            colors: ['#10b981', '#f59e0b', '#ef4444'],
+          })
+        }, 400)
+
+        // Continuous smaller bursts
+        const duration = 4000
+        const end = Date.now() + duration
+        const interval = setInterval(() => {
+          if (Date.now() > end) {
+            clearInterval(interval)
+            // Remove canvas after confetti is done
+            setTimeout(() => {
+              if (canvas.parentNode) {
+                canvas.parentNode.removeChild(canvas)
+              }
+            }, 2000)
+            return
+          }
+
+          myConfetti({
+            particleCount: 20,
+            angle: Math.random() * 60 + 60,
+            spread: 55,
+            origin: { x: Math.random() },
+            colors: ['#3b82f6', '#8b5cf6', '#ec4899', '#10b981', '#f59e0b'],
+          })
+        }, 100)
+
+        return () => {
+          clearInterval(interval)
+          if (canvas.parentNode) {
+            canvas.parentNode.removeChild(canvas)
+          }
+        }
+      } catch (error) {
+        console.error('Confetti error:', error)
+      }
+    }
+
+    // Small delay to ensure DOM is ready
+    const timer = setTimeout(() => {
+      triggerConfetti()
+    }, 100)
+
+    return () => clearTimeout(timer)
+  }, [])
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 py-12">

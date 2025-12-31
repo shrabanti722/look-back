@@ -199,40 +199,96 @@ function formatSurveyDataForEmail(data: SurveyData): string {
 
 // Send notification email with all survey responses
 async function sendNotificationEmail(data: SurveyData) {
+  const recipientEmail = process.env.SURVEY_RECIPIENT_EMAIL
+  
   // Only send if email is configured
-  if (!process.env.RESEND_API_KEY || !process.env.SURVEY_RECIPIENT_EMAIL) {
+  if (!recipientEmail) {
     return null // Email not configured, silently skip
   }
 
-  try {
-    const resend = new Resend(process.env.RESEND_API_KEY)
-    const recipientEmail = process.env.SURVEY_RECIPIENT_EMAIL
-    const fromEmail = process.env.RESEND_FROM_EMAIL || 'Survey <onboarding@resend.dev>'
+  // Try SendGrid first (if configured)
+  if (process.env.SENDGRID_API_KEY) {
+    try {
+      const fromEmail = process.env.SENDGRID_FROM_EMAIL || process.env.SURVEY_FROM_EMAIL || 'noreply@example.com'
+      const emailContent = formatSurveyDataForEmail(data)
+      
+      // Validate email format for replyTo
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+      const isValidEmail = data.email && emailRegex.test(data.email)
 
-    const emailContent = formatSurveyDataForEmail(data)
+      const response = await fetch('https://api.sendgrid.com/v3/mail/send', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${process.env.SENDGRID_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          personalizations: [
+            {
+              to: [{ email: recipientEmail }],
+              subject: `New Survey Submission - ${data.name}`,
+              ...(isValidEmail && {
+                reply_to: { email: data.email },
+              }),
+            },
+          ],
+          from: { email: fromEmail },
+          content: [
+            {
+              type: 'text/plain',
+              value: emailContent,
+            },
+          ],
+        }),
+      })
 
-    // Validate email format for replyTo
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    const isValidEmail = data.email && emailRegex.test(data.email)
-    
-    // Prepare email options
-    const emailOptions: any = {
-      from: fromEmail,
-      to: recipientEmail,
-      subject: `New Survey Submission - ${data.name}`,
-      text: emailContent,
-      // Only add replyTo if email is valid (Resend requires valid email format)
-      ...(isValidEmail && { replyTo: data.email }),
+      if (response.ok) {
+        console.log('Email sent successfully via SendGrid')
+        return { success: true, provider: 'SendGrid' }
+      } else {
+        const errorText = await response.text()
+        console.error('SendGrid error:', errorText)
+        throw new Error(`SendGrid API error: ${response.status}`)
+      }
+    } catch (error: any) {
+      console.error('SendGrid email failed, trying Resend:', error.message)
+      // Fall through to try Resend
     }
-
-    const result = await resend.emails.send(emailOptions)
-
-    return result
-  } catch (error: any) {
-    // Log error but don't throw - we don't want email failures to break the submission
-    console.error('Failed to send notification email:', error.message)
-    return null
   }
+
+  // Try Resend (if configured)
+  if (process.env.RESEND_API_KEY) {
+    try {
+      const resend = new Resend(process.env.RESEND_API_KEY)
+      const fromEmail = process.env.RESEND_FROM_EMAIL || 'Survey <onboarding@resend.dev>'
+      const emailContent = formatSurveyDataForEmail(data)
+
+      // Validate email format for replyTo
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+      const isValidEmail = data.email && emailRegex.test(data.email)
+      
+      // Prepare email options
+      const emailOptions: any = {
+        from: fromEmail,
+        to: recipientEmail,
+        subject: `New Survey Submission - ${data.name}`,
+        text: emailContent,
+        // Only add replyTo if email is valid (Resend requires valid email format)
+        ...(isValidEmail && { replyTo: data.email }),
+      }
+
+      const result = await resend.emails.send(emailOptions)
+      console.log('Email sent successfully via Resend')
+      return result
+    } catch (error: any) {
+      console.error('Resend email failed:', error.message)
+      return null
+    }
+  }
+
+  // No email service configured
+  console.log('No email service configured (SendGrid or Resend)')
+  return null
 }
 
 export async function POST(request: NextRequest) {
